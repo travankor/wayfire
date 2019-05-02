@@ -198,7 +198,7 @@ next_output_with_win = <super> <shift> KEY_T
 
 # resize a window
 [resize]
-activate = <super> <shift> BTN_LEFT
+activate = <super> BTN_RIGHT
 
 # rotate the screen
 [rotator]
