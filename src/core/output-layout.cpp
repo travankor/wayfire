@@ -467,7 +467,7 @@ namespace wf
                     "Trying to use custom mode (might not work).",
                     mode.width, mode.height, mode.refresh / 1000.0, handle->name);
                 wlr_output_set_custom_mode(handle, mode.width, mode.height,
-                    mode.refresh / 1000.0);
+                    mode.refresh);
             }
 
             return;
