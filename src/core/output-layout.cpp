@@ -246,11 +246,17 @@ namespace wf
                 return *mode;
 
             /* Finally, if there isn't any mode (for ex. wayland backend),
-             * try a default resolution */
+             * try the wlr_output resolution, falling back to 1200x720
+             * if width or height is <= 0 */
             wlr_output_mode default_mode;
-            default_mode.width = 1280;
-            default_mode.height = 720;
-            default_mode.refresh = 60000;
+            auto width = handle->width > 0 ? handle->width : 1200;
+            auto height = handle->height > 0 ? handle->height : 720;
+            auto refresh = handle->refresh > 0 ? handle->refresh : 60000;
+
+            default_mode.width = width;
+            default_mode.height = height;
+            default_mode.refresh = refresh;
+
             return default_mode;
         }
 
@@ -461,7 +467,7 @@ namespace wf
                     "Trying to use custom mode (might not work).",
                     mode.width, mode.height, mode.refresh / 1000.0, handle->name);
                 wlr_output_set_custom_mode(handle, mode.width, mode.height,
-                    mode.refresh / 1000.0);
+                    mode.refresh);
             }
 
             return;
