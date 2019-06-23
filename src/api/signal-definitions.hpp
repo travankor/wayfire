@@ -95,6 +95,10 @@ wf::output_t *get_signaled_output(wf::signal_data_t *data);
 using output_added_signal = _output_signal;
 using output_removed_signal = _output_signal;
 
+struct wlr_event_pointer_swipe_begin;
+struct wlr_event_pointer_swipe_update;
+struct wlr_event_pointer_swipe_end;
+
 namespace wf
 {
     class input_device_t;
@@ -109,6 +113,21 @@ namespace wf
     struct input_device_signal : public signal_data_t
     {
         nonstd::observer_ptr<input_device_t> device;
+    };
+
+    struct swipe_begin_signal : public wf::signal_data_t
+    {
+        wlr_event_pointer_swipe_begin *ev;
+    };
+
+    struct swipe_update_signal : public wf::signal_data_t
+    {
+        wlr_event_pointer_swipe_update *ev;
+    };
+
+    struct swipe_end_signal : public wf::signal_data_t
+    {
+        wlr_event_pointer_swipe_end *ev;
     };
 }
 

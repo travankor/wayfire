@@ -1,5 +1,6 @@
 #include "pointer.hpp"
 #include "input-manager.hpp"
+#include "signal-definitions.hpp"
 
 #include <core.hpp>
 #include <debug.hpp>
@@ -471,6 +472,9 @@ void wf::LogicalPointer::handle_pointer_axis(wlr_event_pointer_axis *ev)
 void wf::LogicalPointer::handle_pointer_swipe_begin(
     wlr_event_pointer_swipe_begin *ev)
 {
+    wf::swipe_begin_signal data;
+    data.ev = ev;
+    wf::get_core().emit_signal("pointer-swipe-begin", &data);
     wlr_pointer_gestures_v1_send_swipe_begin(
         wf::get_core().protocols.pointer_gestures, input->seat,
         ev->time_msec, ev->fingers);
@@ -479,6 +483,9 @@ void wf::LogicalPointer::handle_pointer_swipe_begin(
 void wf::LogicalPointer::handle_pointer_swipe_update(
     wlr_event_pointer_swipe_update *ev)
 {
+    wf::swipe_update_signal data;
+    data.ev = ev;
+    wf::get_core().emit_signal("pointer-swipe-update", &data);
     wlr_pointer_gestures_v1_send_swipe_update(
         wf::get_core().protocols.pointer_gestures, input->seat,
         ev->time_msec, ev->dx, ev->dy);
@@ -487,6 +494,9 @@ void wf::LogicalPointer::handle_pointer_swipe_update(
 void wf::LogicalPointer::handle_pointer_swipe_end(
     wlr_event_pointer_swipe_end *ev)
 {
+    wf::swipe_end_signal data;
+    data.ev = ev;
+    wf::get_core().emit_signal("pointer-swipe-end", &data);
     wlr_pointer_gestures_v1_send_swipe_end(
         wf::get_core().protocols.pointer_gestures, input->seat,
         ev->time_msec, ev->cancelled);
