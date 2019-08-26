@@ -64,6 +64,11 @@ bool operator & (const wf_geometry& rect, const wf_point& point)
     return wlr_box_contains_point(&rect, point.x, point.y);
 }
 
+bool operator & (const wf_geometry& rect, const wf_pointf& point)
+{
+    return wlr_box_contains_point(&rect, point.x, point.y);
+}
+
 bool operator & (const wf_geometry& r1, const wf_geometry& r2)
 {
     wlr_box result;

@@ -46,6 +46,8 @@ wf_point    operator - (const wf_point& a);
 
 /* Returns true if point is inside rect */
 bool operator & (const wf_geometry& rect, const wf_point& point);
+/* Returns true if point is inside rect */
+bool operator & (const wf_geometry& rect, const wf_pointf& point);
 /* Returns true if the two geometries have a common point */
 bool operator & (const wf_geometry& r1, const wf_geometry& r2);
 
