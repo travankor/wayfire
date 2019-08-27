@@ -33,7 +33,7 @@ static inline int vswipe_finish_target(const double accumulated_dx,
         const double move_threshold = 0.35,
         const double fast_threshold = 24)
 {
-    double target_dx = 0;
+    int target_dx = 0;
 
     const bool too_left = vx == 0 && (accumulated_dx > 0.0 || last_deltas > 0.0);
     const bool too_right = vx == vw - 1 && (accumulated_dx < 0.0 || last_deltas < 0.0);

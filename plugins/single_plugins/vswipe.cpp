@@ -22,12 +22,24 @@ class vswipe : public wf::plugin_interface_t
 {
     private:
         struct {
-            wf::workspace_stream_t left, curr, right;
+            /* When the workspace is set to (-1, -1), means no such workspace */
+            wf::workspace_stream_t prev, curr, next;
         } streams;
+
+        enum swipe_direction_t
+        {
+            HORIZONTAL = 0,
+            VERTICAL,
+            UNKNOWN,
+        };
 
         struct {
             bool swiping = false;
-            double dx = 0.0;
+            swipe_direction_t direction;
+
+            wf_pointf initial_deltas;
+
+            double delta_sum = 0.0;
             double gap = 0.0;
 
             double delta_prev = 0.0;
@@ -85,19 +97,38 @@ class vswipe : public wf::plugin_interface_t
         renderer = [=] (const wf_framebuffer& buffer) { render(buffer); };
     }
 
+    /**
+     * Get the translation matrix for a workspace at the given offset.
+     * Depends on the swipe direction
+     */
+    glm::mat4 get_translation(double offset)
+    {
+        switch (state.direction)
+        {
+            case UNKNOWN:
+                return glm::mat4(1.0);
+            case HORIZONTAL:
+                return glm::translate(glm::mat4(1.0),
+                    glm::vec3(offset, 0.0, 0.0));
+            case VERTICAL:
+                return glm::translate(glm::mat4(1.0),
+                    glm::vec3(0.0, -offset, 0.0));
+        }
+
+        assert(false); // not reached
+    }
+
     void render(const wf_framebuffer &fb)
     {
         if (!duration.running() && !state.swiping)
             finalize_and_exit();
 
         if (duration.running())
-            state.dx = duration.progress(transition);
+            state.delta_sum = duration.progress(transition);
 
-        if (state.vx > 0)
-            update_stream(streams.left);
+        update_stream(streams.prev);
         update_stream(streams.curr);
-        if (state.vx < state.vw - 1)
-            update_stream(streams.right);
+        update_stream(streams.next);
 
         OpenGL::render_begin(fb);
         OpenGL::clear(background_color->as_cached_color());
@@ -110,23 +141,22 @@ class vswipe : public wf::plugin_interface_t
             .y2 = -1,
         };
 
-        auto swipe = glm::translate(glm::mat4(1.0), glm::vec3(state.dx * 2, 0.0, 0.0));
-
-        if (state.vx > 0)
+        auto swipe = get_translation(state.delta_sum * 2);
+        if (streams.prev.ws.x >= 0)
         {
-            auto left = glm::translate(glm::mat4(1.0), glm::vec3(-2.0 - state.gap * 2.0, 0.0, 0.0));
-            OpenGL::render_transformed_texture(streams.left.buffer.tex,
-                out_geometry, {}, fb.transform * left * swipe);
+            auto prev = get_translation(-2.0 - state.gap * 2.0);
+            OpenGL::render_transformed_texture(streams.prev.buffer.tex,
+                out_geometry, {}, fb.transform * prev * swipe);
         }
 
         OpenGL::render_transformed_texture(streams.curr.buffer.tex,
             out_geometry, {}, fb.transform * swipe);
 
-        if (state.vx < state.vw - 1)
+        if (streams.next.ws.x >= 0)
         {
-            auto right = glm::translate(glm::mat4(1.0), glm::vec3(2.0 + state.gap * 2.0, 0.0, 0.0));
-            OpenGL::render_transformed_texture(streams.right.buffer.tex,
-                out_geometry, {}, fb.transform * right * swipe);
+            auto next = get_translation(2.0 + state.gap * 2.0);
+            OpenGL::render_transformed_texture(streams.next.buffer.tex,
+                out_geometry, {}, fb.transform * next * swipe);
         }
 
         GL_CALL(glUseProgram(0));
@@ -135,6 +165,9 @@ class vswipe : public wf::plugin_interface_t
 
     inline void update_stream(wf::workspace_stream_t& s)
     {
+        if (s.ws.x < 0 || s.ws.y < 0)
+            return;
+
         if (!s.running)
             output->render->workspace_stream_start(s);
         else
@@ -166,7 +199,9 @@ class vswipe : public wf::plugin_interface_t
         grab_interface->grab();
 
         state.swiping = true;
-        state.dx = 0;
+        state.direction = UNKNOWN;
+        state.initial_deltas = {0.0, 0.0};
+        state.delta_sum = 0;
         state.delta_last = 0;
         state.delta_prev = 0;
 
@@ -182,16 +217,38 @@ class vswipe : public wf::plugin_interface_t
         state.vx = ws.x;
         state.vy = ws.y;
 
-        // XXX: redundant checks, setting out-of-bounds here works fine
-        if (ws.x > 0)
-            streams.left.ws = wf_point {ws.x - 1, ws.y};
+        /* Invalid in the beginning, because we want a few swipe events to
+         * determine whether swipe is horizontal or vertical */
+        streams.prev.ws = {-1, -1};
+        streams.next.ws = {-1, -1};
         streams.curr.ws = wf_point {ws.x, ws.y};
-        if (ws.x < grid.width - 1)
-            streams.right.ws = wf_point {ws.x + 1, ws.y};
 
         output->render->set_renderer(renderer);
         output->render->damage_whole();
     };
+
+    void start_swipe(swipe_direction_t direction)
+    {
+        assert(direction != UNKNOWN);
+        state.direction = direction;
+
+        auto ws = output->workspace->get_current_workspace();
+        auto grid = output->workspace->get_workspace_grid_size();
+
+        if (direction == HORIZONTAL)
+        {
+            if (ws.x > 0)
+                streams.prev.ws = wf_point{ws.x - 1, ws.y};
+            if (ws.x < grid.width - 1)
+                streams.next.ws = wf_point{ws.x + 1, ws.y};
+        } else //if (direction == VERTICAL)
+        {
+            if (ws.y > 0)
+                streams.prev.ws = wf_point{ws.x, ws.y - 1};
+            if (ws.y < grid.height - 1)
+                streams.next.ws = wf_point{ws.x, ws.y + 1};
+        }
+    }
 
     wf::signal_callback_t on_swipe_update = [=] (wf::signal_data_t *data)
     {
@@ -200,12 +257,53 @@ class vswipe : public wf::plugin_interface_t
 
         auto ev = static_cast<wf::swipe_update_signal*> (data)->ev;
 
+        if (state.direction == UNKNOWN)
+        {
+            auto grid = output->workspace->get_workspace_grid_size();
+
+            // XXX: how to determine this??
+            static constexpr double initial_direction_threshold = 0.05;
+            state.initial_deltas.x +=
+                std::abs(ev->dx) / speed_factor->as_double();
+            state.initial_deltas.y +=
+                std::abs(ev->dy) / speed_factor->as_double();
+
+            bool horizontal =
+                state.initial_deltas.x > initial_direction_threshold;
+            bool vertical =
+                state.initial_deltas.y > initial_direction_threshold;
+
+            horizontal &= state.initial_deltas.x > state.initial_deltas.y;
+            vertical &= state.initial_deltas.y > state.initial_deltas.x;
+
+            if (horizontal || grid.height == 1)
+            {
+                start_swipe(HORIZONTAL);
+            }
+            else if (vertical || grid.width == 1)
+            {
+                start_swipe(VERTICAL);
+            }
+
+            if (state.direction == UNKNOWN)
+                return;
+        }
+
         const double cap = speed_cap->as_cached_double();
         const double fac = speed_factor->as_cached_double();
-        state.dx += vswipe_process_delta(ev->dx, state.dx, state.vx, state.vw, cap, fac);
 
         state.delta_prev = state.delta_last;
-        state.delta_last = ev->dx;
+        if (state.direction == HORIZONTAL)
+        {
+            state.delta_sum += vswipe_process_delta(ev->dx, state.delta_sum,
+                state.vx, state.vw, cap, fac);
+            state.delta_last = ev->dx;
+        } else
+        {
+            state.delta_sum += vswipe_process_delta(ev->dy, state.delta_sum,
+                state.vy, state.vh, cap, fac);
+            state.delta_last = ev->dy;
+        }
 
         output->render->damage_whole();
     };
@@ -219,15 +317,39 @@ class vswipe : public wf::plugin_interface_t
 
         auto ev = static_cast<wf::swipe_end_signal*>(data)->ev;
 
-        const double move_threshold = clamp(threshold->as_cached_double(), 0.0, 1.0);
-        const double fast_threshold = clamp(delta_threshold->as_cached_double(), 0.0, 1000.0);
-        const double target_dx = (ev->cancelled && !ignore_cancel->as_cached_int()) ? 0
-            : vswipe_finish_target(state.dx, state.vx, state.vw,
-                    state.delta_prev + state.delta_last,
-                    move_threshold, fast_threshold);
+        const double move_threshold =
+            clamp(threshold->as_cached_double(), 0.0, 1.0);
+        const double fast_threshold =
+            clamp(delta_threshold->as_cached_double(), 0.0, 1000.0);
 
-        transition = {state.dx, target_dx + state.gap * (target_dx == 0 ? 0 : std::copysign(1.0, target_dx))};
-        output->workspace->set_workspace(wf_point {state.vx - static_cast<int>(target_dx), state.vy});
+        int target_delta = 0;
+        wf_point target_workspace = {state.vx, state.vy};
+
+        if (!ev->cancelled || ignore_cancel->as_int())
+        {
+            switch (state.direction)
+            {
+                case UNKNOWN:
+                    target_delta = 0;
+                    break;
+                case HORIZONTAL:
+                    target_delta = vswipe_finish_target(state.delta_sum,
+                        state.vx, state.vw, state.delta_prev + state.delta_last,
+                        move_threshold, fast_threshold);
+                    target_workspace.x -= target_delta;
+                    break;
+                case VERTICAL:
+                    target_delta = vswipe_finish_target(state.delta_sum,
+                        state.vy, state.vh, state.delta_prev + state.delta_last,
+                        move_threshold, fast_threshold);
+                    target_workspace.y -= target_delta;
+                    break;
+            }
+        }
+
+        transition = {state.delta_sum, target_delta + state.gap * target_delta};
+
+        output->workspace->set_workspace(target_workspace);
         output->render->set_redraw_always();
         duration.start();
     };
@@ -238,9 +360,11 @@ class vswipe : public wf::plugin_interface_t
         grab_interface->ungrab();
         output->deactivate_plugin(grab_interface);
 
-        output->render->workspace_stream_stop(streams.left);
+        if (streams.prev.running)
+            output->render->workspace_stream_stop(streams.prev);
         output->render->workspace_stream_stop(streams.curr);
-        output->render->workspace_stream_stop(streams.right);
+        if (streams.next.running)
+            output->render->workspace_stream_stop(streams.next);
 
         output->render->set_renderer(nullptr);
         output->render->set_redraw_always(false);
@@ -252,9 +376,9 @@ class vswipe : public wf::plugin_interface_t
             finalize_and_exit();
 
         OpenGL::render_begin();
-        streams.left.buffer.release();
+        streams.prev.buffer.release();
         streams.curr.buffer.release();
-        streams.right.buffer.release();
+        streams.next.buffer.release();
         OpenGL::render_end();
     }
 };
