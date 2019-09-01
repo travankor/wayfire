@@ -335,6 +335,11 @@ class wf::render_manager::impl
     std::unique_ptr<effect_hook_manager_t> effects;
     std::unique_ptr<postprocessing_manager_t> postprocessing;
 
+    wf_option background_color_opt;
+    wf_option_callback background_color_opt_changed;
+    /* The default color which is user configurable */
+    wf_color default_color = {0.0f, 0.0f, 0.0f, 1.0f};
+
     impl(output_t *o)
         : output(o)
     {
@@ -348,6 +353,18 @@ class wf::render_manager::impl
         on_frame.connect(&output_damage->damage_manager->events.frame);
 
         init_default_streams();
+
+        background_color_opt_changed = [=] ()
+        {
+            auto color = background_color_opt->as_color();
+            update_background_color(color);
+        };
+
+        auto section = wf::get_core().config->get_section("core");
+        background_color_opt = section->get_option("background_color", "0 0 0 1");
+        background_color_opt->add_updated_handler(&background_color_opt_changed);
+        background_color_opt_changed();
+
         output_damage->schedule_repaint();
     }
 
@@ -373,11 +390,7 @@ class wf::render_manager::impl
 
     void update_background_color(wf_color color)
     {
-        auto wsize = output->workspace->get_workspace_grid_size();
-
-        for (int i = 0; i < wsize.width; i++)
-            for (int j = 0; j < wsize.height; j++)
-                default_streams[i][j].background = {color.r, color.g, color.b, color.a};
+        default_color = color;
 
         output_damage->damage_whole_idle();
     }
@@ -875,7 +888,12 @@ class wf::render_manager::impl
         }
 
         check_schedule_surfaces(repaint, stream);
-        clear_empty_areas(repaint, stream.background);
+
+        if (stream.background.a < 0)
+            clear_empty_areas(repaint, default_color);
+        else
+            clear_empty_areas(repaint, stream.background);
+
         render_views(repaint);
 
         unschedule_drag_icon();
@@ -894,7 +912,6 @@ class wf::render_manager::impl
 render_manager::render_manager(output_t *o)
     : pimpl(new impl(o)) { }
 render_manager::~render_manager() = default;
-void render_manager::update_background_color(wf_color color) { pimpl->update_background_color(color); }
 void render_manager::set_renderer(render_hook_t rh) { pimpl->set_renderer(rh); }
 void render_manager::set_redraw_always(bool always) { pimpl->set_redraw_always(always); }
 void render_manager::schedule_redraw() { pimpl->output_damage->schedule_repaint(); }

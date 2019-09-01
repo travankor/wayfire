@@ -18,7 +18,7 @@ struct workspace_stream_t
     float scale_y = 1.0;
 
     /* The background color of the stream, when there is no view above it */
-    wf_color background = {0.0f, 0.0f, 0.0f, 1.0f};
+    wf_color background = {0.0f, 0.0f, 0.0f, -1.0f};
 };
 
 /** Emitted whenever a workspace stream is being started or stopped */
