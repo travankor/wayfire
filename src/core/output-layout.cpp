@@ -702,6 +702,9 @@ namespace wf
         bool shutdown_received = false;
         signal_callback_t on_config_reload, on_shutdown;
 
+        wf_option background_color_opt;
+        wf_option_callback background_color_opt_changed;
+
         public:
         impl(wlr_backend *backend)
         {
@@ -738,6 +741,17 @@ namespace wf
 
             on_output_manager_test.connect(&output_manager->events.test);
             on_output_manager_apply.connect(&output_manager->events.apply);
+
+            background_color_opt_changed = [=] ()
+            {
+                auto color = background_color_opt->as_color();
+                for (auto& output : outputs)
+                    output.second->output->render->update_background_color(color);
+            };
+
+            auto section = wf::get_core().config->get_section("core");
+            background_color_opt = section->get_option("background_color", "0 0 0 1");
+            background_color_opt->add_updated_handler(&background_color_opt_changed);
         }
 
         ~impl()
@@ -841,6 +855,7 @@ namespace wf
             });
 
             reconfigure_from_config();
+            background_color_opt_changed();
         }
 
         void remove_output(wlr_output *to_remove)

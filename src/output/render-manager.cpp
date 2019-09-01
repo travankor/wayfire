@@ -371,6 +371,19 @@ class wf::render_manager::impl
         }
     }
 
+    void update_background_color(wf_color color)
+    {
+        log_info("update_background_color: %f, %f, %f, %f", color.r, color.g, color.b, color.a);
+
+        auto wsize = output->workspace->get_workspace_grid_size();
+
+        for (int i = 0; i < wsize.width; i++)
+            for (int j = 0; j < wsize.height; j++)
+                default_streams[i][j].background = {color.r, color.g, color.b, color.a};
+
+        output_damage->damage_whole_idle();
+    }
+
     render_hook_t renderer;
     void set_renderer(render_hook_t rh)
     {
@@ -883,6 +896,7 @@ class wf::render_manager::impl
 render_manager::render_manager(output_t *o)
     : pimpl(new impl(o)) { }
 render_manager::~render_manager() = default;
+void render_manager::update_background_color(wf_color color) { pimpl->update_background_color(color); }
 void render_manager::set_renderer(render_hook_t rh) { pimpl->set_renderer(rh); }
 void render_manager::set_redraw_always(bool always) { pimpl->set_redraw_always(always); }
 void render_manager::schedule_redraw() { pimpl->output_damage->schedule_repaint(); }

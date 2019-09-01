@@ -66,6 +66,12 @@ class render_manager : public wf::signal_provider_t
     ~render_manager();
 
     /**
+     * Set the background color used for clearing the workspace streams.
+     * @param color The color to use
+     */
+    void update_background_color(wf_color color);
+
+    /**
      * Set the render hook to be used for rendering.
      * @param rh The render hook to use, or nullptr for default renderer
      */
