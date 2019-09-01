@@ -373,8 +373,6 @@ class wf::render_manager::impl
 
     void update_background_color(wf_color color)
     {
-        log_info("update_background_color: %f, %f, %f, %f", color.r, color.g, color.b, color.a);
-
         auto wsize = output->workspace->get_workspace_grid_size();
 
         for (int i = 0; i < wsize.width; i++)
