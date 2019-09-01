@@ -17,7 +17,14 @@ struct workspace_stream_t
     float scale_x = 1.0;
     float scale_y = 1.0;
 
-    /* The background color of the stream, when there is no view above it */
+    /* The background color of the stream, when there is no view above it.
+     * All streams start with -1.0 alpha to indicate that the color is
+     * invalid. In this case, we use the default color, which can
+     * optionally be set by the user. If a plugin changes the background,
+     * the color will be valid and it will be used instead. This way,
+     * plugins can choose the background color they want first and if
+     * it is not set (alpha = -1.0) it will fallback to the default
+     * user configurable color. */
     wf_color background = {0.0f, 0.0f, 0.0f, -1.0f};
 };
 

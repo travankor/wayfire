@@ -890,9 +890,11 @@ class wf::render_manager::impl
         check_schedule_surfaces(repaint, stream);
 
         if (stream.background.a < 0)
+        {
             clear_empty_areas(repaint, default_color);
-        else
+        } else {
             clear_empty_areas(repaint, stream.background);
+        }
 
         render_views(repaint);
 
