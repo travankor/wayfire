@@ -16,7 +16,9 @@ extern "C"
 #define static
 #include <wlr/backend.h>
 #include <wlr/backend/drm.h>
-#include <wlr/backend/x11.h>
+#if WLR_HAS_X11_BACKEND
+    #include <wlr/backend/x11.h>
+#endif
 #include <wlr/backend/noop.h>
 #include <wlr/backend/wayland.h>
 #include <wlr/types/wlr_output.h>
@@ -241,7 +243,12 @@ namespace wf
             scale_opt     = output_section->get_option("scale", "1");
             transform_opt = output_section->get_option("transform", "normal");
 
-            if (wlr_output_is_x11(handle) || wlr_output_is_wl(handle))
+            bool is_nested_compositor = wlr_output_is_wl(handle);
+
+#if WLR_HAS_X11_BACKEND
+            is_nested_compositor |= wlr_output_is_x11(handle);
+#endif
+            if (is_nested_compositor)
             {
                 /* Nested backends can be resized by the user. We need to handle
                  * these cases */
