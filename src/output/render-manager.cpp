@@ -368,6 +368,11 @@ class wf::render_manager::impl
         output_damage->schedule_repaint();
     }
 
+    ~impl()
+    {
+        background_color_opt->rem_updated_handler(&background_color_opt_changed);
+    }
+
     /* A stream for each workspace */
     std::vector<std::vector<workspace_stream_t>> default_streams;
     /* The stream pointing to the current workspace */
