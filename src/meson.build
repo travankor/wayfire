@@ -28,6 +28,7 @@ wayfire_sources = ['main.cpp',
                    'view/layer-shell.cpp',
                    'view/view-3d.cpp',
                    'view/compositor-view.cpp',
+                   'view/xdg-foreign.cpp',
 
                    'output/plugin-loader.cpp',
                    'output/output.cpp',

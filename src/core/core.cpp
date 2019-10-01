@@ -36,6 +36,7 @@ extern "C"
 #include "seat/input-manager.hpp"
 #include "seat/touch.hpp"
 #include "../view/view-impl.hpp"
+#include "../view/xdg-foreign.hpp"
 #include "../output/wayfire-shell.hpp"
 #include "../output/output-impl.hpp"
 #include "../output/gtk-shell.hpp"
@@ -174,6 +175,7 @@ void wf::compositor_core_impl_t::init()
 
     wf_shell = wayfire_shell_create(display);
     gtk_shell = wf_gtk_shell_create(display);
+    xdg_foreign = std::make_unique<xdg_foreign_implementation_t> (display);
 
     image_io::init();
     OpenGL::init();

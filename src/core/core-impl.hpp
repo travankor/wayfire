@@ -15,6 +15,7 @@ extern "C"
 }
 
 class input_manager;
+class xdg_foreign_implementation_t;
 struct wayfire_shell;
 struct wf_gtk_shell;
 
@@ -39,6 +40,7 @@ class compositor_core_impl_t : public compositor_core_t
      * Initialize the compositor core. Called only by main()
      */
     void init();
+    std::unique_ptr<xdg_foreign_implementation_t> xdg_foreign;
     wayfire_shell *wf_shell;
     wf_gtk_shell *gtk_shell;
 
