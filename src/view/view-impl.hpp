@@ -183,6 +183,9 @@ class wlr_view_t :
     }
 };
 
+/** Emit the map signal for the given view */
+void emit_view_map_signal(wayfire_view view, bool has_position);
+
 wf::surface_interface_t* wf_surface_from_void(void *handle);
 wf::view_interface_t* wf_view_from_void(void *handle);
 

@@ -32,6 +32,9 @@ class wayfire_xwayland_view_base : public wf::wlr_view_t
     int last_server_width = 0;
     int last_server_height = 0;
 
+    /** The geometry requested by the client */
+    bool self_positioned = false;
+
     wf::signal_callback_t output_geometry_changed =
         [this] (wf::signal_data_t*)
     {
@@ -49,6 +52,13 @@ class wayfire_xwayland_view_base : public wf::wlr_view_t
         on_destroy.set_callback([&] (void*) { destroy(); });
         on_configure.set_callback([&] (void* data) {
             auto ev = static_cast<wlr_xwayland_surface_configure_event*> (data);
+            if ((ev->mask & XCB_CONFIG_WINDOW_X) && (ev->mask & XCB_CONFIG_WINDOW_Y))
+            {
+                self_positioned = true;
+            } else {
+                ev->x = geometry.x;
+                ev->y = geometry.y;
+	    }
             configure_request({ev->x, ev->y, ev->width, ev->height});
         });
         on_set_title.set_callback([&] (void*) {
@@ -246,6 +256,16 @@ class wayfire_xwayland_view : public wayfire_xwayland_view_base
         wayfire_xwayland_view_base::destroy();
     }
 
+    void emit_view_map() override
+    {
+        /* Some X clients position themselves on map, and others let the window
+         * manager determine this. We try to heuristically guess which of the
+         * two cases we're dealing with by checking whether we have recevied
+         * a valid ConfigureRequest before mapping */
+        bool client_self_positioned = self_positioned;
+        emit_view_map_signal(self(), client_self_positioned);
+    }
+
     void map(wlr_surface *surface) override
     {
         /* override-redirect status changed between creation and MapNotify */
@@ -285,15 +305,17 @@ class wayfire_xwayland_view : public wayfire_xwayland_view_base
         if (xw->fullscreen)
             fullscreen_request(get_output(), true);
 
-        auto real_output = get_output()->get_layout_geometry();
-        if (!tiled_edges && !fullscreen && !parent)
+        wf::wlr_view_t::map(surface);
+
+        /* Freely-floating X windows might have set a geometry hint, try to
+         * take this into account */
+        if (!tiled_edges && !fullscreen && !parent && !self_positioned)
         {
+            auto real_output = get_output()->get_layout_geometry();
             int desired_x = xw->x - real_output.x;
             int desired_y = xw->y - real_output.y;
             move(desired_x, desired_y);
         }
-
-        wf::wlr_view_t::map(surface);
         create_toplevel();
     }
 
@@ -498,7 +520,7 @@ void wayfire_unmanaged_xwayland_view::unmap()
     /* O-R focuseable views are treated like normal windows, i.e they have the
      * pre-unmap event and have unmap animations */
     if (view_impl->keyboard_focus_enabled)
-        emit_view_pre_unmap(self());
+        emit_view_pre_unmap();
 
     wf::wlr_view_t::unmap();
 }

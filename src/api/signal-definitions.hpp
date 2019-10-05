@@ -14,9 +14,14 @@ wayfire_view get_signaled_view(wf::signal_data_t *data);
 
 using create_view_signal     = _view_signal;
 using destroy_view_signal    = _view_signal;
-using map_view_signal        = _view_signal;
 using unmap_view_signal      = _view_signal;
 using pre_unmap_view_signal  = _view_signal;
+
+struct map_view_signal : public _view_signal
+{
+    /* Indicates whether the position already has its initial posittion */
+    bool is_positioned = false;
+};
 
 /* Indicates the view is no longer available, for ex. it has been minimized
  * or unmapped */

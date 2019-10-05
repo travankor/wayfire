@@ -256,14 +256,6 @@ void wf::wlr_view_t::commit()
     this->last_bounding_box = get_bounding_box();
 }
 
-void wf::emit_view_map(wayfire_view view)
-{
-    map_view_signal data;
-    data.view = view;
-    view->get_output()->emit_signal("map-view", &data);
-    view->emit_signal("map", &data);
-}
-
 void wf::wlr_view_t::map(wlr_surface *surface)
 {
     wlr_surface_base_t::map(surface);
@@ -279,35 +271,9 @@ void wf::wlr_view_t::map(wlr_surface *surface)
     }
 
     damage();
-    emit_view_map(self());
+    emit_view_map();
     /* Might trigger repositioning */
     set_toplevel_parent(this->parent);
-}
-
-void wf::emit_view_unmap(wayfire_view view)
-{
-    unmap_view_signal data;
-    data.view = view;
-
-    if (view->get_output())
-    {
-        view->get_output()->emit_signal("unmap-view", &data);
-        view->get_output()->emit_signal("view-disappeared", &data);
-    }
-
-    view->emit_signal("unmap", &data);
-    view->emit_signal("disappeared", &data);
-}
-
-void wf::emit_view_pre_unmap(wayfire_view view)
-{
-    pre_unmap_view_signal data;
-    data.view = view;
-
-    if (view->get_output())
-        view->get_output()->emit_signal("pre-unmap-view", &data);
-
-    view->emit_signal("pre-unmap", &data);
 }
 
 void wf::wlr_view_t::unmap()
@@ -316,7 +282,7 @@ void wf::wlr_view_t::unmap()
     /* Pre-unmap is typically used for animations. If the view is a regular
      * toplevel view, we don't need to animate */
     if (this->role == wf::VIEW_ROLE_TOPLEVEL)
-        emit_view_pre_unmap(self());
+        emit_view_pre_unmap();
 
     destroy_toplevel();
 
@@ -329,7 +295,47 @@ void wf::wlr_view_t::unmap()
         c->set_toplevel_parent(nullptr);
 
     wlr_surface_base_t::unmap();
-    emit_view_unmap(self());
+    emit_view_unmap();
+}
+
+void wf::emit_view_map_signal(wayfire_view view, bool has_position)
+{
+    map_view_signal data;
+    data.view = view;
+    data.is_positioned = has_position;
+    view->get_output()->emit_signal("map-view", &data);
+    view->emit_signal("map", &data);
+}
+
+void wf::view_interface_t::emit_view_map()
+{
+    emit_view_map_signal(self(), false);
+}
+
+void wf::view_interface_t::emit_view_unmap()
+{
+    unmap_view_signal data;
+    data.view = self();
+
+    if (get_output())
+    {
+        get_output()->emit_signal("unmap-view", &data);
+        get_output()->emit_signal("view-disappeared", &data);
+    }
+
+    emit_signal("unmap", &data);
+    emit_signal("disappeared", &data);
+}
+
+void wf::view_interface_t::emit_view_pre_unmap()
+{
+    pre_unmap_view_signal data;
+    data.view = self();
+
+    if (get_output())
+        get_output()->emit_signal("pre-unmap-view", &data);
+
+    emit_signal("pre-unmap", &data);
 }
 
 void wf::wlr_view_t::destroy()

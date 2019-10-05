@@ -41,14 +41,14 @@ void wf::mirror_view_t::close()
     if (!base_view)
         return;
 
-    emit_view_pre_unmap(self());
+    emit_view_pre_unmap();
 
     base_view->disconnect_signal("unmap", &base_view_unmapped);
     base_view->disconnect_signal("damaged-region", &base_view_damaged);
     base_view = nullptr;
 
     emit_map_state_change(this);
-    emit_view_unmap(self());
+    emit_view_unmap();
 
     unref();
 }
@@ -138,7 +138,7 @@ void wf::color_rect_view_t::close()
 {
     this->_is_mapped = false;
 
-    emit_view_unmap(self());
+    emit_view_unmap();
     emit_map_state_change(this);
 
     unref();

@@ -49,7 +49,7 @@ class wf_move_mirror_view : public wf::mirror_view_t
     virtual void close()
     {
         if (show_animation)
-            emit_view_pre_unmap(self());
+            emit_view_pre_unmap();
 
         wf::mirror_view_t::close();
     }

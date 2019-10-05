@@ -401,28 +401,29 @@ class view_interface_t : public surface_interface_t, public wf::object_base_t
      * Called whenever the minimized, tiled, fullscreened
      * or activated state changes */
     virtual void desktop_state_updated();
+
+    /**
+     * Emit the view map signal. It indicates that a view has been mapped, i.e.
+     * plugins can now "work" with it. Note that not all views will emit the map
+     * event.
+     */
+    virtual void emit_view_map();
+
+    /**
+     * Emit the view unmap signal. It indicates that the view is in the process of
+     * being destroyed. Most plugins should stop any actions they have on the view.
+     */
+    virtual void emit_view_unmap();
+
+    /**
+     * Emit the view pre-unmap signal. It is emitted right before the view
+     * destruction start. At this moment a plugin can still take a snapshot of the
+     * view. Note that not all views emit the pre-unmap signal, however the unmap
+     * signal is mandatory for all views.
+     */
+    virtual void emit_view_pre_unmap();
 };
 
-/**
- * Emit the view map signal. It indicates that a view has been mapped, i.e.
- * plugins can now "work" with it. Note that not all views will emit the map
- * event.
- */
-void emit_view_map(wayfire_view view);
-
-/**
- * Emit the view unmap signal. It indicates that the view is in the process of
- * being destroyed. Most plugins should stop any actions they have on the view.
- */
-void emit_view_unmap(wayfire_view view);
-
-/**
- * Emit the view pre-unmap signal. It is emitted right before the view
- * destruction start. At this moment a plugin can still take a snapshot of the
- * view. Note that not all views emit the pre-unmap signal, however the unmap
- * signal is mandatory for all views.
- */
-void emit_view_pre_unmap(wayfire_view view);
 wayfire_view wl_surface_to_wayfire_view(wl_resource *surface);
 }
 

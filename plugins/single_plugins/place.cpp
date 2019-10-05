@@ -20,14 +20,16 @@ class wayfire_place_window : public wf::plugin_interface_t
 
         created_cb = [=] (wf::signal_data_t *data)
         {
+            auto ev = (map_view_signal*) (data);
             auto view = get_signaled_view(data);
 
             if (view->role != wf::VIEW_ROLE_TOPLEVEL || view->parent ||
-                view->fullscreen || view->tiled_edges)
+                view->fullscreen || view->tiled_edges || ev->is_positioned)
             {
                 return;
             }
 
+            ev->is_positioned = true;
             auto workarea = output->workspace->get_workarea();
             auto mode = placement_mode->as_string();
 
