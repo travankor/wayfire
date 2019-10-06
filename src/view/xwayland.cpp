@@ -121,7 +121,7 @@ class wayfire_xwayland_view_base : public wf::wlr_view_t
         wf::wlr_view_t::close();
     }
 
-    void send_configure(int width, int height)
+    void send_configure(int width, int height, uint16_t mask)
     {
         if (!is_mapped())
             return;
@@ -147,19 +147,19 @@ class wayfire_xwayland_view_base : public wf::wlr_view_t
         }
 
         wlr_xwayland_surface_configure(xw,
-            configure_x, configure_y, width, height);
+            configure_x, configure_y, width, height, mask);
     }
 
-    void send_configure()
+    void send_configure(uint16_t mask)
     {
-        send_configure(last_server_width, last_server_height);
+        send_configure(last_server_width, last_server_height, mask);
     }
 
     void move(int x, int y) override
     {
         wf::wlr_view_t::move(x, y);
         if (!view_impl->in_continuous_move)
-            send_configure();
+            send_configure(XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y);
     }
 
     virtual void set_output(wf::output_t *wo) override
@@ -178,7 +178,8 @@ class wayfire_xwayland_view_base : public wf::wlr_view_t
                 &output_geometry_changed);
         }
         /* Update the real position */
-        send_configure();
+        send_configure(XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y |
+            XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT);
     }
 };
 
@@ -292,7 +293,6 @@ class wayfire_xwayland_view : public wayfire_xwayland_view_base
             int desired_y = xw->y - real_output.y;
             move(desired_x, desired_y);
         }
-
         wf::wlr_view_t::map(surface);
         create_toplevel();
     }
@@ -334,7 +334,7 @@ class wayfire_xwayland_view : public wayfire_xwayland_view_base
         /* We don't send updates while in continuous move, because that means
          * too much configure requests. Instead, we set it at the end */
         if (!view_impl->in_continuous_move)
-            send_configure();
+            send_configure(XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y);
     }
 
     void resize(int w, int h) override
@@ -344,7 +344,10 @@ class wayfire_xwayland_view : public wayfire_xwayland_view_base
 
         last_server_width = w;
         last_server_height = h;
-        send_configure(w, h);
+
+        if (w != geometry.width && h != geometry.height)
+            send_configure(w, h, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y |
+                XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT);
     }
 
     virtual void request_native_size() override
@@ -356,7 +359,8 @@ class wayfire_xwayland_view : public wayfire_xwayland_view_base
         {
             last_server_width = xw->size_hints->base_width;
             last_server_height = xw->size_hints->base_height;
-            send_configure();
+            send_configure(XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y |
+                XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT);
         }
     }
 
